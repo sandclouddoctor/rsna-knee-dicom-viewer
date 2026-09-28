@@ -7,7 +7,7 @@
   "is_private": "true",
   "enable_gpu": "false",
   "enable_internet": "true",
-  "dataset_sources": ["docdsandeep/rsna-knee-dicom-viewer-code"],
+  "dataset_sources": ["docdsandeep/rsna-knee-dicom-viewer-code", "docdsandeep/rsna-knee-viewer-progress"],
   "competition_sources": ["rsna-knee-abnormality-detection"],
   "kernel_sources": [],
   "model_sources": []
