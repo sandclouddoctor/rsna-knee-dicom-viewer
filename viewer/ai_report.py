@@ -6,9 +6,11 @@ it's opened in the viewer, then cache it to disk keyed by StudyInstanceUID so
 re-opening the same study never re-spends an LLM call. This module deliberately
 does NOT pre-generate reports for all 4407 studies.
 
-Requires an Anthropic API key. On Kaggle, add it as a Kaggle Secret named
-ANTHROPIC_API_KEY and enable internet access on the notebook; locally, set the
-ANTHROPIC_API_KEY environment variable.
+Requires a Gemini API key. On Kaggle, add it as a Kaggle Secret named
+GEMINI_API_KEY and enable internet access on the notebook; locally, set the
+GEMINI_API_KEY environment variable. Get one at https://aistudio.google.com/apikey
+(a free tier is available, which is why this module uses Gemini rather than a
+paid-only provider).
 
 Usage:
     from ai_report import get_or_generate_report
@@ -16,7 +18,6 @@ Usage:
 """
 from __future__ import annotations
 
-import base64
 import json
 import os
 from pathlib import Path
@@ -24,7 +25,7 @@ from typing import Iterable
 
 CACHE_DIR = Path(os.environ.get("AI_REPORT_CACHE_DIR", "reports_cache"))
 PROMPT_PATH = Path(__file__).parent / "mri_interpreter_prompt.md"
-MODEL = os.environ.get("AI_REPORT_MODEL", "claude-sonnet-4-5")
+MODEL = os.environ.get("AI_REPORT_MODEL", "gemini-2.5-flash")
 
 _SYSTEM_PROMPT = None
 
@@ -42,32 +43,21 @@ def _cache_path(study_uid: str) -> Path:
 
 
 def _get_api_key() -> str:
-    key = os.environ.get("ANTHROPIC_API_KEY")
+    key = os.environ.get("GEMINI_API_KEY")
     if key:
         return key
     # Kaggle Secrets fallback (only works inside a running Kaggle kernel)
     try:
         from kaggle_secrets import UserSecretsClient  # type: ignore
 
-        return UserSecretsClient().get_secret("ANTHROPIC_API_KEY")
+        return UserSecretsClient().get_secret("GEMINI_API_KEY")
     except Exception as exc:  # pragma: no cover - environment dependent
         raise RuntimeError(
-            "No ANTHROPIC_API_KEY found. Set it as an environment variable, "
-            "or add it as a Kaggle Secret named ANTHROPIC_API_KEY and enable "
-            "internet on this notebook."
+            "No GEMINI_API_KEY found. Set it as an environment variable, or "
+            "add it as a Kaggle Secret named GEMINI_API_KEY and enable "
+            "internet on this notebook. Get a key at "
+            "https://aistudio.google.com/apikey."
         ) from exc
-
-
-def _encode_image(path: str) -> dict:
-    data = Path(path).read_bytes()
-    return {
-        "type": "image",
-        "source": {
-            "type": "base64",
-            "media_type": "image/png",
-            "data": base64.standard_b64encode(data).decode("utf-8"),
-        },
-    }
 
 
 def generate_report(
@@ -76,40 +66,40 @@ def generate_report(
     plane_labels: Iterable[str] | None = None,
     max_images: int = 12,
 ) -> str:
-    """Call the Anthropic API once to generate a structured report for this study.
+    """Call the Gemini API once to generate a structured report for this study.
 
     slice_png_paths: representative rendered slices (not necessarily the full
     series — pass a spread across the sagittal/axial/coronal runs available,
     e.g. every 3rd slice, to stay within a reasonable image budget per call).
     """
-    import anthropic
+    from google import genai
+    from google.genai import types
 
-    client = anthropic.Anthropic(api_key=_get_api_key())
+    client = genai.Client(api_key=_get_api_key())
     paths = list(slice_png_paths)[:max_images]
     labels = list(plane_labels) if plane_labels else [Path(p).stem for p in paths]
 
-    content = []
+    contents = []
     for path, label in zip(paths, labels):
-        content.append({"type": "text", "text": f"Slice: {label}"})
-        content.append(_encode_image(path))
-    content.append(
-        {
-            "type": "text",
-            "text": (
-                f"Study {study_uid}. {len(paths)} representative slices shown "
-                f"above out of the full series. Generate the structured report "
-                f"per the system instructions."
-            ),
-        }
+        contents.append(f"Slice: {label}")
+        contents.append(
+            types.Part.from_bytes(data=Path(path).read_bytes(), mime_type="image/png")
+        )
+    contents.append(
+        f"Study {study_uid}. {len(paths)} representative slices shown above out "
+        f"of the full series. Generate the structured report per the system "
+        f"instructions."
     )
 
-    resp = client.messages.create(
+    resp = client.models.generate_content(
         model=MODEL,
-        max_tokens=2000,
-        system=_load_system_prompt(),
-        messages=[{"role": "user", "content": content}],
+        contents=contents,
+        config=types.GenerateContentConfig(
+            system_instruction=_load_system_prompt(),
+            max_output_tokens=2000,
+        ),
     )
-    return "".join(block.text for block in resp.content if block.type == "text")
+    return resp.text
 
 
 def get_or_generate_report(

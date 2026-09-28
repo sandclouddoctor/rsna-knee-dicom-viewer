@@ -28,10 +28,12 @@ LABELS = [
     "Lateral OA", "PF OA", "Effusion", "Synovitis", "Baker's", "Contusion", "Fracture",
 ]
 
-ANNOTATIONS_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data", "clinician_annotations.csv",
-)
+# Resolved against the CURRENT WORKING DIRECTORY, not this file's own location.
+# This module's code may live somewhere read-only (e.g. Kaggle's /kaggle/input/
+# when the code ships as an attached Dataset), while the working directory
+# (repo root locally, /kaggle/working on Kaggle) is always writable -- and is
+# exactly where the viewer notebook's own cwd already points.
+ANNOTATIONS_PATH = os.path.join(os.getcwd(), "data", "clinician_annotations.csv")
 
 _COLUMNS = ["StudyInstanceUID", *LABELS, "annotator", "timestamp", "notes"]
 

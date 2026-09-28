@@ -46,9 +46,10 @@ concrete steps to scale up once the design is validated.
 **On Kaggle** (recommended — this is where the data lives):
 1. Fork/open `viewer/dicom_viewer.ipynb` as a Kaggle notebook with the
    competition attached as a data source.
-2. Settings → Internet → On (needed for translation + AI report generation).
-3. Add-ons → Secrets → add `ANTHROPIC_API_KEY` if you want AI report
-   generation.
+2. Settings → Internet → On (needed for AI report generation; translation is
+   bundled and works offline).
+3. Add-ons → Secrets → add `GEMINI_API_KEY` if you want AI report generation
+   (a free tier is available at https://aistudio.google.com/apikey).
 4. `pip install -r requirements.txt` in the first cell, then run all.
 5. Save your labels as you go with **Save my labels** — they land in
    `data/clinician_annotations.csv`. Save that file as a Kaggle Dataset (or
@@ -60,7 +61,7 @@ concrete steps to scale up once the design is validated.
 and you'll need those 24 studies' DICOMs downloaded separately):
 ```bash
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=...       # for AI report generation
+export GEMINI_API_KEY=...          # for AI report generation
 export RSNA_DATA_ROOT=/path/to/your/local/copy
 jupyter notebook viewer/dicom_viewer.ipynb
 ```

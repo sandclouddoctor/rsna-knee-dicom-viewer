@@ -10,7 +10,7 @@ pandas
 deep-translator>=1.11
 
 # AI report generation (mri-interpreter)
-anthropic>=0.34
+google-genai>=0.3
 
 # DINOv3 multimodal RAG
 torch>=2.1

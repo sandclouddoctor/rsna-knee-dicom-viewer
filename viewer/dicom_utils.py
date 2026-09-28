@@ -16,9 +16,24 @@ from pathlib import Path
 import numpy as np
 import pydicom
 
-DEFAULT_DATA_ROOT = os.environ.get(
-    "RSNA_DATA_ROOT", "/kaggle/input/rsna-knee-abnormality-detection"
-)
+def _detect_data_root() -> str:
+    """Kaggle has mounted a competition's data at different paths across
+    platform versions -- directly under /kaggle/input/<slug>/, or nested
+    under /kaggle/input/competitions/<slug>/. Check both rather than assuming
+    one, so this doesn't silently break again on the next mount convention
+    change; falls back to the older top-level path if neither is found (the
+    notebook's own pilot-batch fallback then takes over)."""
+    candidates = [
+        "/kaggle/input/rsna-knee-abnormality-detection",
+        "/kaggle/input/competitions/rsna-knee-abnormality-detection",
+    ]
+    for path in candidates:
+        if os.path.isdir(path):
+            return path
+    return candidates[0]
+
+
+DEFAULT_DATA_ROOT = os.environ.get("RSNA_DATA_ROOT") or _detect_data_root()
 
 
 @dataclass

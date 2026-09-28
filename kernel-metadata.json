@@ -1,0 +1,14 @@
+{
+  "id": "docdsandeep/rsna-knee-dicom-viewer",
+  "title": "RSNA Knee DICOM Viewer",
+  "code_file": "viewer/dicom_viewer.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": ["docdsandeep/rsna-knee-dicom-viewer-code"],
+  "competition_sources": ["rsna-knee-abnormality-detection"],
+  "kernel_sources": [],
+  "model_sources": []
+}
