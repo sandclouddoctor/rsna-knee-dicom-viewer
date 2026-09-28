@@ -17,6 +17,7 @@ name: Deploy to Kaggle
 # These are never checked into the repo or printed in logs.
 
 on:
+  # (trigger a fresh run now that KAGGLE_USERNAME/KAGGLE_KEY secrets are set)
   push:
     branches: [main]
     paths:
