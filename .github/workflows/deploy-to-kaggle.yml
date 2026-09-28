@@ -1,0 +1,75 @@
+name: Deploy to Kaggle
+
+# Auto-mirrors this repo onto Kaggle whenever the viewer or model_ensemble
+# code changes on main:
+#   1. Repackages viewer/*.py, model_ensemble/, and data/ as the
+#      "rsna-knee-dicom-viewer-code" Kaggle Dataset (kernel-metadata.json
+#      attaches this dataset so the notebook can import them -- a
+#      notebook-type `kaggle kernels push` only uploads the single
+#      code_file, never sibling folders).
+#   2. Pushes viewer/dicom_viewer.ipynb itself as the Kaggle kernel.
+#
+# Requires two repository secrets (Settings -> Secrets and variables ->
+# Actions), taken from https://www.kaggle.com/settings/api ("Create New
+# API Token" under Legacy API Credentials):
+#   KAGGLE_USERNAME
+#   KAGGLE_KEY
+# These are never checked into the repo or printed in logs.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "viewer/**"
+      - "model_ensemble/**"
+      - "data/**"
+      - "kernel-metadata.json"
+      - ".github/workflows/deploy-to-kaggle.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Kaggle CLI
+        run: pip install kaggle
+
+      - name: Configure Kaggle credentials
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          mkdir -p ~/.kaggle
+          printf '{"username":"%s","key":"%s"}' "$KAGGLE_USERNAME" "$KAGGLE_KEY" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      - name: Build code dataset staging folder
+        run: |
+          set -e
+          mkdir -p _kaggle_code_ds/viewer _kaggle_code_ds/model_ensemble _kaggle_code_ds/data
+          # everything the notebook imports EXCEPT the notebook itself
+          # (that ships as the kernel's own code_file, not this dataset)
+          cp viewer/*.py _kaggle_code_ds/viewer/ 2>/dev/null || true
+          cp viewer/*.md _kaggle_code_ds/viewer/ 2>/dev/null || true
+          cp -r model_ensemble/. _kaggle_code_ds/model_ensemble/
+          rm -rf _kaggle_code_ds/model_ensemble/__pycache__
+          cp data/*.csv data/*.json _kaggle_code_ds/data/ 2>/dev/null || true
+          cat > _kaggle_code_ds/dataset-metadata.json <<'EOF'
+          {
+            "title": "RSNA Knee DICOM Viewer Code",
+            "id": "docdsandeep/rsna-knee-dicom-viewer-code",
+            "licenses": [{"name": "CC0-1.0"}]
+          }
+          EOF
+
+      - name: Push updated code dataset
+        run: kaggle datasets version -p _kaggle_code_ds -m "Auto-sync from GitHub ${{ github.sha }}" -r tar
+
+      - name: Push notebook kernel
+        run: kaggle kernels push -p .

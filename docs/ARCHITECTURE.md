@@ -65,7 +65,7 @@ just the pilot batch.
 that `translate.get_or_translate()` used exclusively before the bundle above
 existed, and still falls back to for translation outside the bundle: check a
 JSON cache file keyed by `StudyInstanceUID` first; only call the API
-(Anthropic / Google Translate) on a cache miss; write the result back before
+(Gemini / Google Translate) on a cache miss; write the result back before
 returning. This means:
 - Opening a study you've already viewed costs nothing.
 - A fresh Kaggle kernel session starts with an empty cache — if you want
