@@ -1,0 +1,19 @@
+# Never commit raw competition DICOMs or large data — this repo is code only.
+*.dcm
+*.npz
+*.npy
+raw_dicoms/
+kaggle.json
+access_token.txt
+.env
+*.pyc
+__pycache__/
+.ipynb_checkpoints/
+cache/
+*.faiss
+*.index
+rag/index/
+embeddings/*.npy
+reports_cache/
+translation_cache/
+.DS_Store

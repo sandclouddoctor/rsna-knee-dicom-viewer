@@ -1,0 +1,18 @@
+{
+  "labels": [
+    "ACL",
+    "MCL",
+    "Medial Meniscus",
+    "Lateral Meniscus",
+    "Medial OA",
+    "Lateral OA",
+    "PF OA",
+    "Effusion",
+    "Synovitis",
+    "Baker's",
+    "Contusion",
+    "Fracture"
+  ],
+  "source": "RSNA Knee Abnormality Detection competition train.csv column headers",
+  "encoding": "1 = abnormality present, 0 = absent, blank/NaN = not manually labeled (weak/NLP-derived probability only, see report_weak_label_manifest.csv upstream)"
+}
