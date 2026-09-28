@@ -21,8 +21,9 @@ different consumer, no code dependency in either direction:
      `data/clinician_annotations.csv`, keyed by study + annotator, so your
      work persists across sessions and is reloaded automatically next time
      you open that study
-   - the original-language competition report plus on-demand English
-     translation
+   - the original-language competition report plus its English translation —
+     shown automatically, since it's pre-computed and bundled for all 4407
+     studies (`data/train_with_english_translation.csv`), not a live API call
    - an on-demand, cached `/mri-interpreter`-style AI structured report per
      study, offered as a second opinion to speed up your read — not a
      replacement for your own label
@@ -84,6 +85,7 @@ model_ensemble/                  # COMPETITION MODELING COMPONENT (separate from
 data/
   pilot_studies.csv              # 24-study pilot batch (StudyInstanceUID + 12 labels)
   pilot_reports.csv              # original-language reports for the same 24 studies
+  train_with_english_translation.csv  # pre-computed English translation for all 4407 studies
   clinician_annotations.csv      # your saved labels (created the first time you click Save)
   labels_schema.json             # the 12 label names/encoding
 docs/
@@ -92,8 +94,13 @@ docs/
 
 ## Cost/quota notes
 
-- AI report generation and translation are **on-demand and cached to disk**
-  per study — opening the same study twice never re-spends an API call.
+- English translation is **free and instant for all 4407 studies** — it's a
+  pre-computed lookup (`data/train_with_english_translation.csv`), not a live
+  API call. `translate.py` only falls back to a live, disk-cached
+  Google-Translate call for a study outside that bundle, or if you click
+  "Re-translate."
+- AI report generation is **on-demand and cached to disk** per study —
+  opening the same study twice never re-spends an API call.
 - DINOv3 embedding is **opt-in per study list** (`build_index_for_studies`
   takes an explicit list) — it will not silently embed all 4407 studies.
 - None of this repo's code runs Kaggle/Colab GPU training jobs; it's read/

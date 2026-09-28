@@ -44,19 +44,37 @@ truth). It spans 1 to 9+ positive findings per case, plus the demo study used
 during development (`...95817260`), so the viewer and RAG can be exercised
 against genuinely varied cases rather than only normal or only complex ones.
 
-## On-demand + cached: the report/translation lifecycle
+## Translation: bundled and pre-computed, not on-demand
 
-Both `ai_report.get_or_generate_report()` and `translate.get_or_translate()`
-follow the same pattern: check a JSON cache file keyed by `StudyInstanceUID`
-first; only call the API (Anthropic / Google Translate) on a cache miss; write
-the result back before returning. This means:
+Unlike AI report generation, English translation is no longer a live API call
+in the normal case. `data/train_with_english_translation.csv` bundles a
+pre-computed English translation for all 4407 training studies (courtesy of
+Dr. Sandeep), keyed by `StudyInstanceUID`. `translate.get_or_translate()`
+checks this bundle first — free, instant, no internet dependency, no rate
+limit — and only falls back to a live, disk-cached Google-Translate call (the
+original on-demand design, described below) for a study outside the bundle,
+or when `force_retranslate=True` is passed (wired to the notebook's
+"Re-translate" button, for the rare case the bundled translation looks wrong).
+This removes the Google-Translate rate-limiting risk this repo hit during its
+own smoke-testing (see "Errors and fixes" history) for the entire corpus, not
+just the pilot batch.
+
+## On-demand + cached: the AI report lifecycle
+
+`ai_report.get_or_generate_report()` follows the on-demand + cached pattern
+that `translate.get_or_translate()` used exclusively before the bundle above
+existed, and still falls back to for translation outside the bundle: check a
+JSON cache file keyed by `StudyInstanceUID` first; only call the API
+(Anthropic / Google Translate) on a cache miss; write the result back before
+returning. This means:
 - Opening a study you've already viewed costs nothing.
 - A fresh Kaggle kernel session starts with an empty cache — if you want
-  persistence across sessions, save `reports_cache/` and `translation_cache/`
-  as a Kaggle Dataset and load it back in at notebook start, or attach them as
-  notebook output that persists across versions.
-- `force_regenerate=True` is available on both if a report/translation needs
-  to be redone (e.g. after editing `mri_interpreter_prompt.md`).
+  persistence across sessions, save `reports_cache/` (and `translation_cache/`,
+  for the fallback path) as a Kaggle Dataset and load it back in at notebook
+  start, or attach them as notebook output that persists across versions.
+- `force_regenerate=True` (AI reports) / `force_retranslate=True` (translation
+  fallback) is available if a report/translation needs to be redone (e.g.
+  after editing `mri_interpreter_prompt.md`).
 
 ## Viewer vs. model_ensemble: deliberately separate
 
