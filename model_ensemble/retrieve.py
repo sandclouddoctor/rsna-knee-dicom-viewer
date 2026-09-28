@@ -16,8 +16,8 @@ from pathlib import Path
 from .knowledge_base import embed_knowledge, embed_query_text, load_knowledge_chunks
 from .vector_store import VectorStore
 
-CASE_INDEX_PATH = "rag/index/cases"
-KNOWLEDGE_INDEX_PATH = "rag/index/knowledge"
+CASE_INDEX_PATH = "model_ensemble/index/cases"
+KNOWLEDGE_INDEX_PATH = "model_ensemble/index/knowledge"
 
 
 def build_knowledge_index(save_path: str = KNOWLEDGE_INDEX_PATH) -> VectorStore:

@@ -6,7 +6,8 @@ The full training corpus is ~4407 studies, each with 2+ series of 15-40 DICOM
 slices — a full download is realistically 100-200GB+. Kaggle already hosts
 this data and mounts it read-only into any notebook that attaches the
 competition as a data source at `/kaggle/input/rsna-knee-abnormality-detection/`.
-The viewer (`viewer/dicom_utils.py`) reads directly from that path, so there is
+The viewer — Dr. Sandeep's clinician annotation tool (`viewer/dicom_utils.py`) —
+reads directly from that path, so there is
 no bulk transfer step and no local storage burden — you run the notebook on
 Kaggle, browse whichever studies you want, and nothing large ever needs to
 leave Kaggle's infrastructure.
@@ -57,26 +58,41 @@ the result back before returning. This means:
 - `force_regenerate=True` is available on both if a report/translation needs
   to be redone (e.g. after editing `mri_interpreter_prompt.md`).
 
-## The two RAG usage modes
+## Viewer vs. model_ensemble: deliberately separate
+
+The viewer (`viewer/`) and the model-ensemble RAG (`model_ensemble/`) are two
+independent components with no import in either direction. The viewer is
+Dr. Sandeep's clinician annotation tool — its job is producing labels, via
+`viewer/annotations.py` writing to `data/clinician_annotations.csv` when you
+click "Save my labels" in `dicom_viewer.ipynb`. The model_ensemble RAG is a
+competition modeling component consumed by the training/inference pipeline,
+not by the viewer. The two connect only at the data layer, and only in one
+direction: `data/clinician_annotations.csv` (produced by the viewer) is a
+candidate source of additional hard ground truth that a future case-index
+build for `model_ensemble/retrieve.py` could draw on, alongside the 58
+fully-labeled `train.csv` studies — that wiring is not yet built (see "What
+was NOT built here" below).
+
+## The two model_ensemble usage modes
 
 Your brief asked for both, and they share the same underlying indices:
 
-**Knowledge/reference tool** — `rag.retrieve.retrieve_knowledge(query)` takes
-a free-text query (a finding name, a question, a draft impression) and returns
-the most relevant chunks of the `mri-interpreter` knee knowledge base
-(`rag/knowledge/knee_mri_knowledge.md`, split by `## ` heading — 12 chunks
-currently, covering meniscus grading/morphology/mimics, ACL/PCL, MCL/LCL,
+**Knowledge/reference tool** — `model_ensemble.retrieve.retrieve_knowledge(query)`
+takes a free-text query (a finding name, a question, a draft impression) and
+returns the most relevant chunks of the `mri-interpreter` knee knowledge base
+(`model_ensemble/knowledge/knee_mri_knowledge.md`, split by `## ` heading — 12
+chunks currently, covering meniscus grading/morphology/mimics, ACL/PCL, MCL/LCL,
 posterolateral/posteromedial corners, cartilage grading, bone marrow patterns,
 joint fluid/Baker cyst, extensor mechanism, and OA pattern). Useful standalone,
 independent of any model — e.g. pull up the ACL assessment criteria while
-reading a case in the viewer.
+reviewing a case.
 
-**Retrieval-augmented classifier** — `rag.classifier.refine_predictions()` is
-meant to sit downstream of your existing Cycle4 DINOv3 model, not replace it.
+**Retrieval-augmented classifier** — `model_ensemble.classifier.refine_predictions()`
+is meant to sit downstream of your existing Cycle4 DINOv3 model, not replace it.
 Workflow: run your model to get per-label probabilities → identify labels
 near the decision boundary (default 0.3-0.7) → for those labels only, retrieve
 (a) similar prior cases by DINOv3 embedding distance
-(`rag.retrieve.retrieve_similar_cases`) and their known labels as a k-NN prior,
+(`model_ensemble.retrieve.retrieve_similar_cases`) and their known labels as a k-NN prior,
 and (b) relevant knowledge chunks for that finding → send model probability +
 k-NN prior + knowledge snippets to an LLM call that returns a refined
 probability and a rationale citing what informed it. This is intentionally
@@ -93,7 +109,7 @@ that expects a probability without checking for it first.
 
 ## DINOv3 model note
 
-`rag/dinov3_embed.py` targets `facebook/dinov3-vits16-pretrain-lvd1689m` via
+`model_ensemble/dinov3_embed.py` targets `facebook/dinov3-vits16-pretrain-lvd1689m` via
 `transformers.AutoModel`, with an automatic fallback to `facebook/dinov2-small`
 if DINOv3 weights aren't resolvable in your environment (gated model access,
 or a `transformers` version predating DINOv3 support — check on Kaggle before
@@ -110,6 +126,11 @@ embeddings for anything beyond further smoke-testing.
   on-demand from whatever study list you pass in.
 - No standalone hosted web app outside Kaggle/local notebook use.
 - No automatic full-dataset AI report pre-generation.
+- No pipeline wiring `data/clinician_annotations.csv` (what the viewer
+  produces) into `model_ensemble/retrieve.py`'s case index — the viewer can
+  produce ground truth today, but nothing yet consumes it on the modeling
+  side. That's the natural next step once you've built up enough annotations
+  to be worth indexing.
 
 Each of these is a reasonable next step once you've used the pilot and want to
 scale a specific piece — flag which one and it's a much narrower, well-scoped

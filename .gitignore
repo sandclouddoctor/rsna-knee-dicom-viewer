@@ -12,7 +12,7 @@ __pycache__/
 cache/
 *.faiss
 *.index
-rag/index/
+model_ensemble/index/
 embeddings/*.npy
 reports_cache/
 translation_cache/

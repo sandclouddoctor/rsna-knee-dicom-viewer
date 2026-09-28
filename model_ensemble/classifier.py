@@ -1,10 +1,18 @@
 """
-Retrieval-augmented classifier sketch for the 12 RSNA labels.
+Retrieval-augmented classifier for the 12 RSNA labels — competition
+model-ensemble component.
 
-This is deliberately a lightweight ADDITION to your existing Cycle4 DINOv3
-arm6/arm7 models, not a replacement: it combines
+DELIBERATELY SEPARATE from viewer/: nothing in viewer/ imports this module,
+and nothing here imports viewer/. This lives entirely on the modeling side —
+an ensemble member alongside your Cycle4 DINOv3 arm6/arm7 models, consumed by
+your training/inference pipeline, not by the clinician-facing DICOM viewer.
+
+It combines:
   1. a k-NN prior over the 12 labels from similar prior cases (by DINOv3
-     embedding distance, via rag.retrieve.retrieve_similar_cases), and
+     embedding distance, via model_ensemble.retrieve.retrieve_similar_cases —
+     the case index's ground truth comes from data/clinician_annotations.csv
+     plus the original manually-verified subset, i.e. from what the viewer
+     produces, without this module depending on the viewer's code), and
   2. relevant mri-interpreter knowledge chunks for the findings your primary
      model flags as uncertain,
 into a single LLM call that returns calibrated 12-label predictions plus a
